@@ -39,15 +39,18 @@ class linear_layer:
         #   - self.params['W']
         #   - self.params['b']
         ###############################################################################################
-
-
+        self.params['W'] = np.random.normal(0, 0.1, (input_D, output_D))
+        self.params['b'] = np.random.normal(0, 0.1, (1, output_D))
+        # self.params['b'] = np.random.normal(0, 0.1, (output_D,))
 
         ###############################################################################################
         # TODO: Initialize the following two (gradients) with zeros
         #   - self.gradient['W']
         #   - self.gradient['b']
         ###############################################################################################
-
+        self.gradient['W'] = np.zeros((input_D, output_D))
+        self.gradient['b'] = np.zeros((1, output_D))
+        # self.gradient['b'] = np.zeros((output_D,))
 
     def forward(self, X):
         """
@@ -63,7 +66,7 @@ class linear_layer:
         ################################################################################
         # TODO: Implement the linear forward pass. Store the result in forward_output  #
         ################################################################################
-
+        forward_output = X @ self.params['W'] + self.params['b']
         return forward_output
 
     def backward(self, X, grad):
@@ -90,7 +93,10 @@ class linear_layer:
         #   - backward_output (N-by-input_D numpy array, the gradient of the mini-batch loss w.r.t. X)
         # only return backward_output, but need to compute self.gradient['W'] and self.gradient['b']
         #################################################################################################
-
+        self.gradient['W'] = X.T @ grad
+        self.gradient['b'] = np.sum(grad, axis=0, keepdims=True)
+        # self.gradient['b'] = np.sum(grad, axis=0)
+        backward_output = grad @ self.params['W'].T
         return backward_output
 
 
@@ -121,7 +127,8 @@ class relu:
         ################################################################################
         # TODO: Implement the relu forward pass. Store the result in forward_output    #
         ################################################################################
-
+        self.mask = (X > 0)
+        forward_output = np.maximum(0, X)
         return forward_output
 
     def backward(self, X, grad):
@@ -136,7 +143,7 @@ class relu:
             Return:
             - backward_output: A numpy array of the same shape as X, where each element is the partial derivative of the mini-batch loss w.r.t. the corresponding element in  X.
         """
-
+        backward_output = grad * self.mask
         ####################################################################################################
         # TODO: Implement the backward pass
         # You can use the mask created in the forward step.
@@ -159,7 +166,7 @@ def miniBatchGradientDescent(model, _learning_rate):
                 # TODO: update the model parameter module.params[key] by a step of gradient descent.
                 # Note again that the gradient is stored in g already.
                 ####################################################################################
-
+                module.params[key] = module.params[key] - _learning_rate * g
     return model
 
 
@@ -180,6 +187,8 @@ def backward_pass(model, x, a1, h1, a2, y):
     # TODO: Call the backward methods of every layer in the model in reverse order.
     # We have given the first and last backward calls (above and below this TODO block).
     ######################################################################################
+    grad_h1 = model['L2'].backward(h1, grad_a2)
+    grad_a1 = model['nonlinear1'].backward(a1, grad_h1)
 
     grad_x = model['L1'].backward(x, grad_a1)
 
@@ -239,9 +248,9 @@ def gradient_checker(DataSet, model):
     # the first dimension of L1 weight and bias, and the first dimension of L2 weight and bias
     grad_dict = {}
     grad_dict["L1_W_grad_first_dim"] = model['L1'].gradient["W"][0][0]
-    grad_dict["L1_b_grad_first_dim"] = model['L1'].gradient["b"][0]
+    grad_dict["L1_b_grad_first_dim"] = model['L1'].gradient["b"][0][0]
     grad_dict["L2_W_grad_first_dim"] = model['L2'].gradient["W"][0][0]
-    grad_dict["L2_b_grad_first_dim"] = model['L2'].gradient["b"][0]
+    grad_dict["L2_b_grad_first_dim"] = model['L2'].gradient["b"][0][0]
 
     ### Gradients from approximation ###
     # the first dimension of L1 weight and bias, and the first dimension of L2 weight and bias
@@ -265,6 +274,12 @@ def gradient_checker(DataSet, model):
         # Take one forward pass with w - epsilon
         # Refer to the lecture notes for the exact equation for computing the approximate gradient
         ######################################################################################
+        model[layer_name].params[param_name] -= 2 * epsilon
+        _, _, _, f_w_minus_epsilon = forward_pass(model, x, y)
+
+        approximate_gradient = (f_w_add_epsilon - f_w_minus_epsilon) / (2 * epsilon_value)
+
+        model[layer_name].params[param_name] += epsilon
 
         print("Check the gradient of %s in the %s layer from backpropagation: %f and from approximation: %f"
               % (param_name, layer_name, grad, approximate_gradient))
