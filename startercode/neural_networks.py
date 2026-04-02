@@ -143,12 +143,11 @@ class relu:
             Return:
             - backward_output: A numpy array of the same shape as X, where each element is the partial derivative of the mini-batch loss w.r.t. the corresponding element in  X.
         """
-        backward_output = grad * self.mask
         ####################################################################################################
         # TODO: Implement the backward pass
         # You can use the mask created in the forward step.
         ####################################################################################################
-
+        backward_output = grad * self.mask
         return backward_output
 
 
